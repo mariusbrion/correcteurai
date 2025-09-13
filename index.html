@@ -303,14 +303,12 @@
             const addresses = batch.map(item => item['adresse employé']);
             
             const prompt = `Correct and standardize the following list of addresses for compatibility with the Nominatim API.
-- Do not include house numbers (privacy requirement).
-- Expand abbreviations (e.g., "Av." → "Avenue", "Bd" → "Boulevard", "St" → "Saint").
-- Keep accents in place (e.g., "Évry" instead of "Evry").
-- If department or region is missing, assume Nouvelle-Aquitaine by default.
-- Return each address in the following format:
-  "{Street Type} {Street Name}, {Postal Code} {City}, {Department}, {Region}, France"
-Return ONLY a valid JSON array of the corrected addresses, with no other explanation.
-If an address cannot be corrected, return the original address unchanged.
+Rules:
+* Keep the street type present in the input (e.g., Terrace / Terrasse, Avenue, Boulevard). Do NOT change the type unless Nominatim returns a HIGH-CONFIDENCE match with a different type.
+* Expand common abbreviations (Av., Bd, St. → Avenue, Boulevard, Saint).
+* Keep accents and use Title Case.
+* If a postcode is present, infer department and region; if missing or ambiguous, assume Nouvelle-Aquitaine.
+Output: Return ONLY a strict JSON array of strings (no code fences, no backticks, no extra text). Each address string must follow exactly this format: "Type Name, POSTCODE City, Department, Region, France" Use double quotes, no trailing commas. If you cannot correct an address, include the original address string unchanged in the array.
 
 Addresses: ${JSON.stringify(addresses)}`;
             
