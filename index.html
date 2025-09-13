@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address Correction Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, 
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, 
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            background: #e1e8ed;
+            border-radius: 8px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: #e8f4f8;
+            border-left: 3px solid #3498db;
+        }
+
+        .address-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .original-address {
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+
+        .corrected-address {
+            color: #27ae60;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin: 15px 0;
+        }
+
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .results-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📮 Address Correction Tool</h1>
+            <p>Correct poorly formatted addresses using AI</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>⚙️ API Configuration</h2>
+                <div class="form-group">
+                    <label for="apiKey">Groq API Key:</label>
+                    <input type="password" id="apiKey" placeholder="Enter your Groq API key">
+                    <p style="font-size: 0.9rem; margin-top: 8px; color: #666;">
+                        Get your API key from <a href="https://console.groq.com" target="_blank">Groq Console</a>
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="addressColumn">Address Column Name:</label>
+                    <input type="text" id="addressColumn" value="address" placeholder="Name of the column containing addresses">
+                    <p style="font-size: 0.9rem; margin-top: 8px; color: #666;">
+                        The CSV column header that contains the addresses to correct
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📁 Upload CSV File</h2>
+                <div class="form-group">
+                    <div class="file-input-container">
+                        <button class="btn">Choose CSV File</button>
+                        <input type="file" id="csvFile" accept=".csv" class="file-input">
+                    </div>
+                    <span id="fileName" style="margin-left: 10px;">No file chosen</span>
+                    <p style="font-size: 0.9rem; margin-top: 8px; color: #666;">
+                        CSV file with up to 500 addresses. The file should have a header row.
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🔄 Process Addresses</h2>
+                <button id="processBtn" class="btn" disabled>Start Correction</button>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="status" id="status">Ready to process</div>
+            </div>
+
+            <div class="section">
+                <h2>📊 Results</h2>
+                <div id="resultsContainer" class="results-container">
+                    <div class="loading" id="resultsLoading" style="display: none;">
+                        <div class="spinner"></div>
+                        Processing...
+                    </div>
+                    <div id="resultsContent"></div>
+                </div>
+                <button id="downloadBtn" class="btn btn-success" disabled>Download Corrected CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const csvFileInput = document.getElementById('csvFile');
+        const fileNameSpan = document.getElementById('fileName');
+        const apiKeyInput = document.getElementById('apiKey');
+        const addressColumnInput = document.getElementById('addressColumn');
+        const processBtn = document.getElementById('processBtn');
+        const progressBar = document.getElementById('progressBar');
+        const statusDiv = document.getElementById('status');
+        const resultsContent = document.getElementById('resultsContent');
+        const resultsLoading = document.getElementById('resultsLoading');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Global variables
+        let csvData = [];
+        let correctedAddresses = [];
+        let batchSize = 20;
+        let currentBatch = 0;
+
+        // Event listeners
+        csvFileInput.addEventListener('change', handleFileUpload);
+        processBtn.addEventListener('click', startProcessing);
+        downloadBtn.addEventListener('click', downloadCorrectedCSV);
+
+        // Handle file upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameSpan.textContent = file.name;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const text = e.target.result;
+                        parseCSV(text);
+                    } catch (error) {
+                        showError('Error reading CSV file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                fileNameSpan.textContent = 'No file chosen';
+            }
+        }
+
+        // Parse CSV data
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) {
+                showError('CSV file must have at least a header row and one data row');
+                return;
+            }
+            
+            // Extract headers
+            const headers = lines[0].split(',').map(header => header.trim());
+            
+            // Check if address column exists
+            const addressColumn = addressColumnInput.value.trim();
+            if (!headers.includes(addressColumn)) {
+                showError(`Column "${addressColumn}" not found in CSV headers. Available columns: ${headers.join(', ')}`);
+                return;
+            }
+            
+            // Extract data rows
+            csvData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(value => value.trim());
+                if (values.length !== headers.length) continue;
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                csvData.push(row);
+            }
+            
+            if (csvData.length === 0) {
+                showError('No data rows found in CSV file');
+                return;
+            }
+            
+            // Enable process button if API key is provided
+            processBtn.disabled = !apiKeyInput.value.trim();
+            statusDiv.textContent = `Loaded ${csvData.length} addresses from CSV`;
+            showSuccess('CSV file parsed successfully');
+        }
+
+        // API key validation
+        apiKeyInput.addEventListener('input', () => {
+            processBtn.disabled = !apiKeyInput.value.trim() || csvData.length === 0;
+        });
+
+        // Start processing addresses
+        async function startProcessing() {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showError('Please enter your Groq API key');
+                return;
+            }
+            
+            if (csvData.length === 0) {
+                showError('Please upload a CSV file first');
+                return;
+            }
+            
+            // Reset state
+            correctedAddresses = [];
+            currentBatch = 0;
+            updateProgress(0);
+            statusDiv.textContent = 'Starting address correction...';
+            processBtn.disabled = true;
+            resultsLoading.style.display = 'block';
+            resultsContent.innerHTML = '';
+            
+            // Process in batches
+            const batches = createBatches(csvData, batchSize);
+            
+            for (let i = 0; i < batches.length; i++) {
+                currentBatch = i;
+                updateProgress((i / batches.length) * 100);
+                statusDiv.textContent = `Processing batch ${i + 1} of ${batches.length}...`;
+                
+                try {
+                    const correctedBatch = await processBatch(batches[i], apiKey);
+                    correctedAddresses = correctedAddresses.concat(correctedBatch);
+                    
+                    // Display some results
+                    if (i === 0) {
+                        displaySampleResults(batches[i], correctedBatch);
+                    }
+                } catch (error) {
+                    showError(`Error processing batch ${i + 1}: ${error.message}`);
+                    processBtn.disabled = false;
+                    resultsLoading.style.display = 'none';
+                    return;
+                }
+                
+                // Add a small delay to respect rate limits
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            // Complete processing
+            updateProgress(100);
+            statusDiv.textContent = `Completed! Corrected ${correctedAddresses.length} addresses`;
+            showSuccess('All addresses processed successfully');
+            processBtn.disabled = false;
+            resultsLoading.style.display = 'none';
+            downloadBtn.disabled = false;
+            
+            // Show summary
+            displaySummary();
+        }
+
+        // Create batches from data
+        function createBatches(data, batchSize) {
+            const batches = [];
+            for (let i = 0; i < data.length; i += batchSize) {
+                batches.push(data.slice(i, i + batchSize));
+            }
+            return batches;
+        }
+
+        // Process a batch of addresses
+        async function processBatch(batch, apiKey) {
+            const addressColumn = addressColumnInput.value.trim();
+            const addresses = batch.map(item => item[addressColumn]);
+            
+            const prompt = `
+            Correct and standardize the following list of addresses. 
+            Return ONLY a valid JSON array of the corrected addresses, with no other explanation.
+            If an address cannot be corrected, return the original address.
+
+            Incorrect Addresses:
+            ${JSON.stringify(addresses, null, 2)}
+            `;
+            
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        messages: [
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 4000
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error: ${response.status} ${errorText}`);
+                }
+                
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                
+                // Extract JSON from response
+                const jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) {
+                    throw new Error('No JSON array found in response');
+                }
+                
+                const corrected = JSON.parse(jsonMatch[0]);
+                
+                if (!Array.isArray(corrected) || corrected.length !== addresses.length) {
+                    throw new Error('Invalid response format: expected array with same length as input');
+                }
+                
+                // Create corrected items
+                return batch.map((item, index) => {
+                    const correctedItem = {...item};
+                    correctedItem[addressColumn] = corrected[index];
+                    correctedItem.corrected = corrected[index] !== addresses[index];
+                    return correctedItem;
+                });
+            } catch (error) {
+                console.error('Batch processing error:', error);
+                throw error;
+            }
+        }
+
+        // Display sample results
+        function displaySampleResults(originalBatch, correctedBatch) {
+            const addressColumn = addressColumnInput.value.trim();
+            
+            resultsContent.innerHTML = '<h3>Sample Corrections:</h3>';
+            
+            for (let i = 0; i < Math.min(5, originalBatch.length); i++) {
+                const original = originalBatch[i][addressColumn];
+                const corrected = correctedBatch[i][addressColumn];
+                
+                const addressDiv = document.createElement('div');
+                addressDiv.className = 'address-item';
+                addressDiv.innerHTML = `
+                    <div class="original-address">Original: ${original}</div>
+                    <div class="corrected-address">Corrected: ${corrected}</div>
+                `;
+                
+                resultsContent.appendChild(addressDiv);
+            }
+        }
+
+        // Display summary
+        function displaySummary() {
+            const correctedCount = correctedAddresses.filter(item => item.corrected).length;
+            const totalCount = correctedAddresses.length;
+            
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'status';
+            summaryDiv.innerHTML = `
+                <strong>Summary:</strong> ${correctedCount} of ${totalCount} addresses were corrected
+                (${((correctedCount / totalCount) * 100).toFixed(1)}%)
+            `;
+            
+            resultsContent.appendChild(summaryDiv);
+        }
+
+        // Download corrected CSV
+        function downloadCorrectedCSV() {
+            if (correctedAddresses.length === 0) {
+                showError('No corrected data to download');
+                return;
+            }
+            
+            const addressColumn = addressColumnInput.value.trim();
+            const headers = Object.keys(correctedAddresses[0]).filter(key => key !== 'corrected');
+            
+            // Create CSV content
+            let csvContent = headers.join(',') + '\n';
+            
+            for (const item of correctedAddresses) {
+                const row = headers.map(header => {
+                    let value = item[header] || '';
+                    // Escape quotes and wrap in quotes if contains commas
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                }).join(',');
+                
+                csvContent += row + '\n';
+            }
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'corrected_addresses.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Update progress bar
+        function updateProgress(percent) {
+            progressBar.style.width = `${percent}%`;
+        }
+
+        // Show error message
+        function showError(message) {
+            statusDiv.className = 'error';
+            statusDiv.textContent = message;
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            statusDiv.className = 'success';
+            statusDiv.textContent = message;
+        }
+    </script>
+</body>
+</html>
