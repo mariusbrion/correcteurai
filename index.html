@@ -1,23 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Address Corrector</title>
+    <title>Correcteur d'Adresse IA</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             background: #f5f5f5;
+            color: #333;
         }
         
         .container {
             background: white;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
         }
         
         h1 {
@@ -48,14 +49,37 @@
             border-radius: 5px;
             font-size: 16px;
             margin-bottom: 10px;
+            box-sizing: border-box;
         }
         
         input:focus {
             outline: none;
             border-color: #007bff;
         }
+
+        /* Styles pour la zone de glisser-déposer */
+        #dropZone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #888;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        #dropZone.drag-over {
+            background-color: #e9f5ff;
+            border-color: #007bff;
+        }
         
-        button {
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        button, .button-link {
             background: #007bff;
             color: white;
             padding: 12px 25px;
@@ -63,16 +87,25 @@
             border-radius: 5px;
             font-size: 16px;
             cursor: pointer;
-            margin-right: 10px;
+            transition: background-color 0.2s;
+            text-decoration: none; /* Pour le tag <a> */
+            display: inline-block; /* Pour le tag <a> */
         }
         
-        button:hover {
+        button:hover, .button-link:hover {
             background: #0056b3;
         }
         
         button:disabled {
             background: #6c757d;
             cursor: not-allowed;
+        }
+
+        .button-secondary {
+            background: #28a745;
+        }
+        .button-secondary:hover {
+             background: #218838;
         }
         
         .progress {
@@ -81,7 +114,7 @@
             background: #e9ecef;
             border-radius: 10px;
             overflow: hidden;
-            margin: 10px 0;
+            margin: 15px 0;
         }
         
         .progress-bar {
@@ -95,6 +128,7 @@
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
+            text-align: center;
         }
         
         .error {
@@ -122,6 +156,7 @@
             border-radius: 5px;
             padding: 15px;
             background: white;
+            margin-top: 15px;
         }
         
         .address-item {
@@ -129,6 +164,7 @@
             margin: 5px 0;
             border-radius: 5px;
             background: #f8f9fa;
+            border-bottom: 1px solid #eee;
         }
         
         .original {
@@ -149,29 +185,35 @@
 </head>
 <body>
     <div class="container">
-        <h1>🌍 Address Corrector for Nominatim</h1>
+        <h1>🌍 Correcteur d'Adresse IA</h1>
         
         <div class="section">
-            <label for="apiKey">Groq API Key:</label>
-            <input type="password" id="apiKey" placeholder="Enter your Groq API key">
-            <small>Get your key from <a href="https://console.groq.com" target="_blank">console.groq.com</a></small>
+            <label for="apiKey">Clé API Groq:</label>
+            <input type="password" id="apiKey" placeholder="Entrez votre clé API Groq">
+            <small>Obtenez votre clé sur <a href="https://console.groq.com" target="_blank">console.groq.com</a></small>
         </div>
         
         <div class="section">
-            <label for="csvFile">CSV File:</label>
-            <input type="file" id="csvFile" accept=".csv">
-            <small>File must contain a column named "adresse employé"</small>
+            <label for="csvFile">Fichier CSV :</label>
+            <div id="dropZone">
+                Glissez-déposez votre fichier CSV ici ou cliquez pour sélectionner
+                <input type="file" id="csvFile" accept=".csv" hidden>
+            </div>
+            <small>Le fichier doit contenir une colonne nommée "adresse employé"</small>
         </div>
         
         <div class="section">
-            <button id="processBtn" disabled>Process Addresses</button>
-            <button id="downloadBtn" disabled>Download Results</button>
+            <div class="button-group">
+                <button id="processBtn" disabled>Traiter les Adresses</button>
+                <button id="downloadBtn" disabled>Télécharger les Résultats</button>
+                <button class="button-secondary" onclick="window.open('https://mariusbrion.github.io/convertisseur/', '_blank')">Convertir en Coordonnées</button>
+            </div>
             
             <div class="progress">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
             
-            <div id="status" class="status info">Ready to process</div>
+            <div id="status" class="status info">Prêt pour le traitement</div>
             
             <div id="results" class="results" style="display:none;"></div>
         </div>
@@ -181,19 +223,70 @@
         let csvData = [];
         let correctedData = [];
         
-        document.getElementById('apiKey').addEventListener('input', checkReady);
-        document.getElementById('csvFile').addEventListener('change', handleFileUpload);
-        document.getElementById('processBtn').addEventListener('click', processAddresses);
-        document.getElementById('downloadBtn').addEventListener('click', downloadResults);
+        const apiKeyInput = document.getElementById('apiKey');
+        const csvFileInput = document.getElementById('csvFile');
+        const processBtn = document.getElementById('processBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const dropZone = document.getElementById('dropZone');
+
+        // --- Événements ---
+        document.addEventListener('DOMContentLoaded', loadApiKey);
+        apiKeyInput.addEventListener('input', checkReady);
+        csvFileInput.addEventListener('change', handleFileSelect);
+        processBtn.addEventListener('click', processAddresses);
+        downloadBtn.addEventListener('click', downloadResults);
         
-        function checkReady() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const hasFile = csvData.length > 0;
-            document.getElementById('processBtn').disabled = !apiKey || !hasFile;
+        // --- Glisser-déposer (Drag and Drop) ---
+        dropZone.addEventListener('click', () => csvFileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                csvFileInput.files = files; // Assigne le fichier à l'input
+                processFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
         }
         
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
+        // --- Gestion de la clé API ---
+        function loadApiKey() {
+            const savedKey = localStorage.getItem('groqApiKey');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                checkReady();
+            }
+        }
+
+        function saveApiKey(key) {
+            localStorage.setItem('groqApiKey', key);
+        }
+
+        // --- Logique principale ---
+        function checkReady() {
+            const apiKey = apiKeyInput.value.trim();
+            if (apiKey) {
+                saveApiKey(apiKey);
+            }
+            const hasFile = csvData.length > 0;
+            processBtn.disabled = !apiKey || !hasFile;
+        }
+        
+        function processFile(file) {
             if (!file) return;
             
             const reader = new FileReader();
@@ -201,23 +294,23 @@
                 try {
                     parseCSV(e.target.result);
                 } catch (error) {
-                    showStatus('Error reading file: ' + error.message, 'error');
+                    showStatus('Erreur de lecture du fichier : ' + error.message, 'error');
                 }
             };
-            reader.readAsText(file);
+            reader.readAsText(file, 'UTF-8');
         }
         
         function parseCSV(text) {
-            const lines = text.split('\n').filter(line => line.trim());
+            const lines = text.split(/\r?\n/).filter(line => line.trim());
             if (lines.length < 2) {
-                showStatus('CSV must have header and data rows', 'error');
+                showStatus('Le CSV doit contenir un en-tête et au moins une ligne de données', 'error');
                 return;
             }
             
             const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
             
             if (!headers.includes('adresse employé')) {
-                showStatus('Column "adresse employé" not found. Available: ' + headers.join(', '), 'error');
+                showStatus('Colonne "adresse employé" non trouvée. Colonnes disponibles : ' + headers.join(', '), 'error');
                 return;
             }
             
@@ -233,7 +326,8 @@
                 }
             }
             
-            showStatus(`Loaded ${csvData.length} addresses`, 'success');
+            showStatus(`${csvData.length} adresses chargées`, 'success');
+            dropZone.querySelector('div, span, p').textContent = file.name; // Affiche le nom du fichier
             checkReady();
         }
         
@@ -263,10 +357,11 @@
         }
         
         async function processAddresses() {
-            const apiKey = document.getElementById('apiKey').value.trim();
+            const apiKey = apiKeyInput.value.trim();
             
-            document.getElementById('processBtn').disabled = true;
-            showStatus('Processing addresses...', 'info');
+            processBtn.disabled = true;
+            downloadBtn.disabled = true;
+            showStatus('Traitement des adresses...', 'info');
             
             const batchSize = 20;
             correctedData = [];
@@ -276,7 +371,7 @@
                 const progress = ((i + batch.length) / csvData.length) * 100;
                 
                 updateProgress(progress);
-                showStatus(`Processing batch ${Math.floor(i/batchSize) + 1}...`, 'info');
+                showStatus(`Traitement du lot ${Math.floor(i/batchSize) + 1}...`, 'info');
                 
                 try {
                     const corrected = await processBatch(batch, apiKey);
@@ -285,8 +380,8 @@
                     if (i === 0) showSampleResults(batch, corrected);
                     
                 } catch (error) {
-                    showStatus('Error: ' + error.message, 'error');
-                    document.getElementById('processBtn').disabled = false;
+                    showStatus('Erreur: ' + error.message, 'error');
+                    processBtn.disabled = false;
                     return;
                 }
                 
@@ -294,23 +389,23 @@
             }
             
             updateProgress(100);
-            showStatus(`Completed! Processed ${correctedData.length} addresses`, 'success');
-            document.getElementById('processBtn').disabled = false;
-            document.getElementById('downloadBtn').disabled = false;
+            showStatus(`Terminé ! ${correctedData.length} adresses traitées`, 'success');
+            processBtn.disabled = false;
+            downloadBtn.disabled = false;
         }
         
         async function processBatch(batch, apiKey) {
             const addresses = batch.map(item => item['adresse employé']);
             
-            const prompt = `Correct and standardize the following list of addresses for compatibility with the Nominatim API.
-Rules:
-* Keep the street type present in the input (e.g., Terrace / Terrasse, Avenue, Boulevard). Do NOT change the type unless Nominatim returns a HIGH-CONFIDENCE match with a different type.
-* Expand common abbreviations (Av., Bd, St. → Avenue, Boulevard, Saint).
-* Keep accents and use Title Case.
-* If a postcode is present, infer department and region; if missing or ambiguous, assume Nouvelle-Aquitaine.
-Output: Return ONLY a strict JSON array of strings (no code fences, no backticks, no extra text). Each address string must follow exactly this format: "Type Name, POSTCODE City, Department, Region, France" Use double quotes, no trailing commas. If you cannot correct an address, include the original address string unchanged in the array.
+            const prompt = `Corrige et standardise la liste d'adresses suivante pour la rendre compatible avec l'API Nominatim.
+Règles:
+* Conserve le type de voie présent dans l'entrée (ex: Terrasse, Avenue, Boulevard). Ne change PAS le type sauf si Nominatim renvoie une correspondance à HAUTE confiance avec un type différent.
+* Développe les abréviations communes (Av., Bd, St. → Avenue, Boulevard, Saint).
+* Conserve les accents et utilise la casse "Title Case".
+* Si un code postal est présent, déduis le département et la région ; si manquant ou ambigu, assume Nouvelle-Aquitaine.
+Sortie: Renvoie UNIQUEMENT un tableau JSON strict de chaînes de caractères (sans bloc de code, sans backticks, sans texte supplémentaire). Chaque chaîne d'adresse doit suivre EXACTEMENT ce format : "Type Nom, CODE POSTAL Ville, Département, Région, France". Utilise des guillemets doubles, sans virgule finale. Si tu ne peux pas corriger une adresse, inclus la chaîne de l'adresse originale inchangée dans le tableau.
 
-Addresses: ${JSON.stringify(addresses)}`;
+Adresses: ${JSON.stringify(addresses)}`;
             
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
@@ -327,25 +422,25 @@ Addresses: ${JSON.stringify(addresses)}`;
             });
             
             if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
+                throw new Error(`Erreur API : ${response.status}`);
             }
             
             const data = await response.json();
             const content = data.choices[0].message.content;
             
-            // Remove markdown formatting and extract JSON
             const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
             
             if (!jsonMatch) {
-                throw new Error('No JSON array in response');
+                console.error("Réponse brute de l'API :", content);
+                throw new Error('Aucun tableau JSON trouvé dans la réponse');
             }
             
             const corrected = JSON.parse(jsonMatch[0]);
             
             return batch.map((item, index) => {
                 const result = { ...item };
-                result['adresse employé'] = corrected[index];
+                result['adresse employé'] = corrected[index] || item['adresse employé']; // Fallback
                 return result;
             });
         }
@@ -353,14 +448,14 @@ Addresses: ${JSON.stringify(addresses)}`;
         function showSampleResults(original, corrected) {
             const results = document.getElementById('results');
             results.style.display = 'block';
-            results.innerHTML = '<h3>Sample Results:</h3>';
+            results.innerHTML = '<h3>Exemples de résultats :</h3>';
             
             for (let i = 0; i < Math.min(3, original.length); i++) {
                 const div = document.createElement('div');
                 div.className = 'address-item';
                 div.innerHTML = `
                     <div class="original">Original: ${original[i]['adresse employé']}</div>
-                    <div class="corrected">Corrected: ${corrected[i]['adresse employé']}</div>
+                    <div class="corrected">Corrigé: ${corrected[i]['adresse employé']}</div>
                 `;
                 results.appendChild(div);
             }
@@ -375,7 +470,7 @@ Addresses: ${JSON.stringify(addresses)}`;
             correctedData.forEach(row => {
                 const values = headers.map(header => {
                     let value = row[header] || '';
-                    if (value.includes(',') || value.includes('"')) {
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
                         value = `"${value.replace(/"/g, '""')}"`;
                     }
                     return value;
@@ -383,11 +478,11 @@ Addresses: ${JSON.stringify(addresses)}`;
                 csv += values.join(',') + '\n';
             });
             
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'corrected_addresses.csv';
+            a.download = 'adresses_corrigees.csv';
             a.click();
             URL.revokeObjectURL(url);
         }
